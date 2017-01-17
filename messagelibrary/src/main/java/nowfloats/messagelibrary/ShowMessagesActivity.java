@@ -37,10 +37,13 @@ public class ShowMessagesActivity extends AppCompatActivity implements LoaderMan
     private static final int MEAASGE_LOADER_ID = 221;
     private static final Uri MESSAGE_URI = Uri.parse("content://sms/");
     private static final int READ_MESSAGES_ID = 221 ;
-    private String[] projections=new String[]{"_id","date","address","body","seen"};
+    private String[] projections=new String[]{"_id","date","address","body","seen"};//\"VM-INDMRT\", \"TM-JustDl\", \"VM-Quikrr\"
+
+    private String selection=" address Like \"%INDMRT%\" or address Like \"%JustDl%\" or address Like \"%VM-Quikrr%\"";
     RecyclerView recyclerView;
     LinearLayout linearLayout;
     private String order="date DESC";
+    private static final String DATABASE_NAME="USER_MESSAGES";
     MessageListModel messageListModel;
     MessageAdapter adapter;
     private ArrayList<MessageListModel.SmsMessage> messageList;
@@ -69,10 +72,10 @@ public class ShowMessagesActivity extends AppCompatActivity implements LoaderMan
         else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
         {
             if(shouldShowRequestPermissionRationale(Manifest.permission.READ_SMS)){
-                Snackbar.make(linearLayout, R.string.required_permission_to_show, Snackbar.LENGTH_LONG)
+                Snackbar.make(linearLayout, R.string.required_permission_to_show, Snackbar.LENGTH_INDEFINITE)
                         .setAction(R.string.enable, this)  // action text on the right side
                         .setActionTextColor(getResources().getColor(android.R.color.holo_green_light))
-                        .setDuration(10000).show();
+                        .show();
             }
             else {
                 requestPermissions(new String[]{Manifest.permission.READ_SMS},READ_MESSAGES_ID);
@@ -90,20 +93,21 @@ public class ShowMessagesActivity extends AppCompatActivity implements LoaderMan
 
     @Override
     public Loader<Cursor> onCreateLoader(int id, Bundle args) {
-        return new CursorLoader(this,MESSAGE_URI,projections,null,null,order);
+        return new CursorLoader(this,MESSAGE_URI,projections,selection,null,order);
     }
 
     @Override
     public void onLoadFinished(Loader<Cursor> loader, Cursor data) {
+        Log.v("ggg","start");
         if(data!=null && data.moveToFirst()){
+
             messageList.clear();
-         /*   int i=-1;
-            for (String s:data.getColumnNames()){
-                i++;
-                Log.v("ggg",data.getColumnName(i)+" "+data.getString(i));
-            }*/
             MessageListModel.SmsMessage message;
            do{
+
+               /*for(int i=0;i<data.getColumnCount();i++){
+                   Log.v("ggg"+i,data.getString(i)+" "+data.getColumnName(i));
+               }*/
                 message = MessageListModel.SmsMessage.getInstance()
                        .setId(data.getLong(0))
                        .setDate(data.getLong(1))
@@ -111,6 +115,7 @@ public class ShowMessagesActivity extends AppCompatActivity implements LoaderMan
                        .setBody(data.getString(3))
                        .setSeen(data.getString(4));
                messageList.add(message);
+               Log.v("ggg",message.toString());
            }while(data.moveToNext());
 
             messageListModel.setMessageList(messageList);
@@ -126,33 +131,36 @@ public class ShowMessagesActivity extends AppCompatActivity implements LoaderMan
 
     private void sendDataToFirebase() {
 
-        mDatabase.child("MessageList").setValue(messageListModel); /*new DatabaseReference.CompletionListener() {
+        mDatabase.child(DATABASE_NAME).setValue(messageListModel);/*, new DatabaseReference.CompletionListener() {
             @Override
             public void onComplete(DatabaseError databaseError, DatabaseReference databaseReference) {
                 Log.v("ggg", "error on completion" + databaseError);
             }
-        });*/
+        }*/
     }
     private void addListener(){
         mDatabase.addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(DataSnapshot dataSnapshot) {
-                ArrayList<MessageListModel.SmsMessage> modelList = (ArrayList<MessageListModel.SmsMessage>) dataSnapshot.child("MessageList").child("arrayList").getValue();
+                MessageListModel model = dataSnapshot.child(DATABASE_NAME).getValue(MessageListModel.class);
 
-                if (messageListModel==null) return;
-                // messageList = messageListModel.getArrayList();
+                if (model==null || model.getDatabase()==null || model.getDatabase().isEmpty()){
+                    Snackbar.make(linearLayout,R.string.contact_empty,Snackbar.LENGTH_LONG).show();
+                    return;
+                }
+                ArrayList<MessageListModel.SmsMessage> modelList = model.getMessageList();
                 if(modelList!=null) {
-
-                    Log.v("ggg",modelList.size()+" "+modelList.get(0).getDate());
-                   /* adapter = new MessageAdapter(modelList);
-                    recyclerView.setAdapter(adapter);*/
+                    adapter = new MessageAdapter(modelList);
+                    recyclerView.setAdapter(adapter);
+                }else{
+                    Snackbar.make(linearLayout,R.string.contact_empty,Snackbar.LENGTH_LONG).show();
                 }
 
             }
 
             @Override
             public void onCancelled(DatabaseError databaseError) {
-                Log.v("ggg","error database firebase"+databaseError);
+                Snackbar.make(linearLayout,"error in access messages",Snackbar.LENGTH_LONG).show();
             }
         });
     }

@@ -1,7 +1,6 @@
 package nowfloats.messagelibrary;
 
 import java.util.ArrayList;
-import java.util.List;
 
 /**
  * Created by Admin on 1/16/2017.
@@ -9,14 +8,24 @@ import java.util.List;
 
 public class MessageListModel {
 
-    public ArrayList<SmsMessage> messageList;
+    private ArrayList<SmsMessage> messageList;
+    private String database;
+
+    public String getDatabase() {
+        return database;
+    }
+
+    public void setDatabase(String database) {
+        this.database = "User Messages";
+    }
 
     public static MessageListModel getInstance(){
         return new MessageListModel();
     }
     public MessageListModel(){
+        setDatabase("");
     }
-    public ArrayList<SmsMessage> getArrayList(){
+    public ArrayList<SmsMessage> getMessageList(){
         return messageList;
     }
 
@@ -34,19 +43,6 @@ public class MessageListModel {
         private String body,subject,seen;
         private long date;
         private long id;
-        private List<String> list;
-
-        public List<String> getList() {
-            return list;
-        }
-
-        public SmsMessage setList(List<String> list) {
-           ArrayList<String>a= new ArrayList<String>();
-            a.add("a");
-            a.add("b");
-            this.list = a;
-            return this;
-        }
 
         SmsMessage setBody(String body){
             this.body=body;

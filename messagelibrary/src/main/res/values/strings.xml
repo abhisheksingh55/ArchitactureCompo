@@ -3,4 +3,5 @@
     <string name="message_name">Message Name</string>
     <string name="enable">ENABLE</string>
     <string name="required_permission_to_show">we need this permission to show you messages here</string>
+    <string name="contact_empty">Messages not found</string>
 </resources>
