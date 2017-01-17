@@ -1,0 +1,6 @@
+<resources>
+    <string name="app_name">Messagelibrary</string>
+    <string name="message_name">Message Name</string>
+    <string name="enable">ENABLE</string>
+    <string name="required_permission_to_show">we need this permission to show you messages here</string>
+</resources>
