@@ -7,11 +7,9 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 
-import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
-import java.util.TimeZone;
 
 /**
  * Created by Admin on 1/16/2017.
@@ -35,12 +33,14 @@ public class MessageAdapter extends RecyclerView.Adapter<MessageAdapter.MyViewHo
         String pattern ="MM-dd-yyyy, HH:mm";
         holder.body.setText(messageList.get(position).getBody());
         holder.subject.setText(messageList.get(position).getSubject());
-        Calendar calendar= Calendar.getInstance();
+      /*  Calendar calendar= Calendar.getInstance();
         calendar.setTimeZone(TimeZone.getDefault());
-        calendar.setTimeInMillis(messageList.get(position).getDate());
-        Date date=calendar.getTime();
-        String date1 = new SimpleDateFormat(pattern, Locale.getDefault()).format(date);
-        holder.date.setText(date1);
+        calendar.setTimeInMillis(messageList.get(position).getDate());*/
+        //Date date=calendar.getTime();
+        SimpleDateFormat formatter = new SimpleDateFormat(pattern, Locale.getDefault());
+        formatter.setTimeZone(android.icu.util.TimeZone.getDefault());
+        Date date=new Date(messageList.get(position).getDate());
+        holder.date.setText(formatter.format(date));
     }
 
     @Override

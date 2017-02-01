@@ -9,21 +9,21 @@ import java.util.ArrayList;
 public class MessageListModel {
 
     private ArrayList<SmsMessage> messageList;
-    private String database;
+    private int database;
 
-    public String getDatabase() {
+    public int getDatabase() {
         return database;
     }
 
-    public void setDatabase(String database) {
-        this.database = "User Messages";
+    public void setDatabase(int database) {
+        this.database = database;
     }
 
     public static MessageListModel getInstance(){
         return new MessageListModel();
-    }
+}
     public MessageListModel(){
-        setDatabase("");
+
     }
     public ArrayList<SmsMessage> getMessageList(){
         return messageList;

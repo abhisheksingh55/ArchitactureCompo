@@ -20,11 +20,8 @@ android {
 }
 
 dependencies {
-    dependencies {
-        // colon needs to prefixed with the library path
-        debugCompile project(path: ':messagelibrary')
-        releaseCompile project(path: ':messagelibrary')
-    }
+    compile project(path: ':messagelibrary')
+
     compile fileTree(dir: 'libs', include: ['*.jar'])
     androidTestCompile('com.android.support.test.espresso:espresso-core:2.2.2', {
         exclude group: 'com.android.support', module: 'support-annotations'

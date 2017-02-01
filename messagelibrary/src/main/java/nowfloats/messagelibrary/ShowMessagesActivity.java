@@ -66,7 +66,8 @@ public class ShowMessagesActivity extends AppCompatActivity implements LoaderMan
         addListener();
     }
     private void getPermission(){
-        if(ContextCompat.checkSelfPermission(this, Manifest.permission.READ_SMS)== PackageManager.PERMISSION_GRANTED){
+        if(ContextCompat.checkSelfPermission(this, Manifest.permission.READ_SMS)== PackageManager.PERMISSION_GRANTED
+                && ContextCompat.checkSelfPermission(this, Manifest.permission.RECEIVE_SMS)== PackageManager.PERMISSION_GRANTED){
             getSupportLoaderManager().initLoader(MEAASGE_LOADER_ID,null,this);
         }
         else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
@@ -78,7 +79,7 @@ public class ShowMessagesActivity extends AppCompatActivity implements LoaderMan
                         .show();
             }
             else {
-                requestPermissions(new String[]{Manifest.permission.READ_SMS},READ_MESSAGES_ID);
+                requestPermissions(new String[]{Manifest.permission.READ_SMS,Manifest.permission.RECEIVE_SMS},READ_MESSAGES_ID);
             }
         }
     }
@@ -144,7 +145,7 @@ public class ShowMessagesActivity extends AppCompatActivity implements LoaderMan
             public void onDataChange(DataSnapshot dataSnapshot) {
                 MessageListModel model = dataSnapshot.child(DATABASE_NAME).getValue(MessageListModel.class);
 
-                if (model==null || model.getDatabase()==null || model.getDatabase().isEmpty()){
+                if (model==null || model.getDatabase()==0){
                     Snackbar.make(linearLayout,R.string.contact_empty,Snackbar.LENGTH_LONG).show();
                     return;
                 }
@@ -167,7 +168,7 @@ public class ShowMessagesActivity extends AppCompatActivity implements LoaderMan
     @Override
     public void onClick(View v) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            requestPermissions(new String[]{Manifest.permission.READ_SMS},READ_MESSAGES_ID);
+            requestPermissions(new String[]{Manifest.permission.READ_SMS,Manifest.permission.RECEIVE_SMS},READ_MESSAGES_ID);
         }
     }
 }

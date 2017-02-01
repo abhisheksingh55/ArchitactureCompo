@@ -5,6 +5,8 @@ import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.support.v7.app.AppCompatActivity;
 
+import nowfloats.messagelibrary.ReadMessages;
+
 /**
  * Created by Admin on 1/14/2017.
  */
@@ -14,6 +16,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(nowfloats.messagelibrary.R.layout.activity_show_message);
-        startActivity(new Intent(this,nowfloats.messagelibrary.ShowMessagesActivity.class));
+        startService(new Intent(this, ReadMessages.class));
+        /*startActivity(new Intent(this,nowfloats.messagelibrary.ShowMessagesActivity.class));*/
     }
 }
