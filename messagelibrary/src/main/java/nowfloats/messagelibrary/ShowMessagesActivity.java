@@ -1,22 +1,18 @@
 package nowfloats.messagelibrary;
 
 import android.Manifest;
+import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.database.Cursor;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.design.widget.Snackbar;
-import android.support.v4.app.LoaderManager;
 import android.support.v4.content.ContextCompat;
-import android.support.v4.content.CursorLoader;
-import android.support.v4.content.Loader;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
-import android.util.Log;
 import android.view.View;
 import android.widget.LinearLayout;
 
@@ -32,24 +28,26 @@ import java.util.ArrayList;
  * Created by Admin on 1/14/2017.
  */
 
-public class ShowMessagesActivity extends AppCompatActivity implements LoaderManager.LoaderCallbacks<Cursor>,View.OnClickListener {
+public class ShowMessagesActivity extends AppCompatActivity implements View.OnClickListener {
+
 
     private static final int MEAASGE_LOADER_ID = 221;
     private static final Uri MESSAGE_URI = Uri.parse("content://sms/");
     private static final int READ_MESSAGES_ID = 221 ;
-    private String[] projections=new String[]{"_id","date","address","body","seen"};//\"VM-INDMRT\", \"TM-JustDl\", \"VM-Quikrr\"
+    private String[] projections=new String[]{"_id","date","address","body","seen"};
 
-    private String selection=" address Like \"%INDMRT%\" or address Like \"%JustDl%\" or address Like \"%VM-Quikrr%\"";
+    private String selection=" address Like \"%WAYSMS%\" or address Like \"%INDMRT%\" or address Like \"%JustDl%\" or address Like \"%VM-Quikrr%\"";
     RecyclerView recyclerView;
     LinearLayout linearLayout;
+    private static final String DATABASE_NAME="FpTag";
     private String order="date DESC";
-    private static final String DATABASE_NAME="USER_MESSAGES";
     MessageListModel messageListModel;
     MessageAdapter adapter;
     private ArrayList<MessageListModel.SmsMessage> messageList;
 
-    DatabaseReference mDatabase = FirebaseDatabase.getInstance().getReference();
 
+    // this is the first method called
+    //here we have to initialized the widget before use
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -60,86 +58,63 @@ public class ShowMessagesActivity extends AppCompatActivity implements LoaderMan
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
         messageListModel = MessageListModel.getInstance();
         messageList= new ArrayList<>();
-        /*adapter =new MessageAdapter(messageList);
-        recyclerView.setAdapter(adapter);*/
+
+        // for offine storing data
+        //always it be the first line before use firebase database reference
+        FirebaseDatabase.getInstance().setPersistenceEnabled(true);
         getPermission();
         addListener();
     }
+
     private void getPermission(){
+        // check read sms permission
+
         if(ContextCompat.checkSelfPermission(this, Manifest.permission.READ_SMS)== PackageManager.PERMISSION_GRANTED
                 && ContextCompat.checkSelfPermission(this, Manifest.permission.RECEIVE_SMS)== PackageManager.PERMISSION_GRANTED){
-            getSupportLoaderManager().initLoader(MEAASGE_LOADER_ID,null,this);
+            /*getSupportLoaderManager().initLoader(MEAASGE_LOADER_ID,null,this);*/
+
+            // start the service to send data to firebase
+            startService(new Intent(this, ReadMessages.class));
         }
         else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
         {
+            // if user deny the permissions
             if(shouldShowRequestPermissionRationale(Manifest.permission.READ_SMS)){
                 Snackbar.make(linearLayout, R.string.required_permission_to_show, Snackbar.LENGTH_INDEFINITE)
-                        .setAction(R.string.enable, this)  // action text on the right side
-                        .setActionTextColor(getResources().getColor(android.R.color.holo_green_light))
+                        .setAction(R.string.enable, this)  // action text on the right side of snackbar
+                        .setActionTextColor(ContextCompat.getColor(this,android.R.color.holo_green_light))
                         .show();
             }
             else {
+                // Requesting permissions by user
                 requestPermissions(new String[]{Manifest.permission.READ_SMS,Manifest.permission.RECEIVE_SMS},READ_MESSAGES_ID);
             }
         }
     }
 
+    // this method called when user react on permissions
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         if(requestCode==READ_MESSAGES_ID && grantResults.length>0 &&
                 grantResults[0] == PackageManager.PERMISSION_GRANTED){
-            getSupportLoaderManager().initLoader(MEAASGE_LOADER_ID,null,this);
+            /*getSupportLoaderManager().initLoader(MEAASGE_LOADER_ID,null,this);*/
+
+            // if he grant the permissions
+            startService(new Intent(this, ReadMessages.class));
         }
     }
 
-    @Override
-    public Loader<Cursor> onCreateLoader(int id, Bundle args) {
-        return new CursorLoader(this,MESSAGE_URI,projections,selection,null,order);
-    }
 
     @Override
-    public void onLoadFinished(Loader<Cursor> loader, Cursor data) {
-        Log.v("ggg","start");
-        if(data!=null && data.moveToFirst()){
-
-            messageList.clear();
-            MessageListModel.SmsMessage message;
-           do{
-
-               /*for(int i=0;i<data.getColumnCount();i++){
-                   Log.v("ggg"+i,data.getString(i)+" "+data.getColumnName(i));
-               }*/
-                message = MessageListModel.SmsMessage.getInstance()
-                       .setId(data.getLong(0))
-                       .setDate(data.getLong(1))
-                       .setSubject(data.getString(2))
-                       .setBody(data.getString(3))
-                       .setSeen(data.getString(4));
-               messageList.add(message);
-               Log.v("ggg",message.toString());
-           }while(data.moveToNext());
-
-            messageListModel.setMessageList(messageList);
-            //adapter.notifyDataSetChanged();
-            sendDataToFirebase();
+    public void onClick(View v) {
+        // after click on action button of snackbar
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            requestPermissions(new String[]{Manifest.permission.READ_SMS,Manifest.permission.RECEIVE_SMS},READ_MESSAGES_ID);
         }
     }
-
-    @Override
-    public void onLoaderReset(Loader<Cursor> loader) {
-
-    }
-
-    private void sendDataToFirebase() {
-
-        mDatabase.child(DATABASE_NAME).setValue(messageListModel);/*, new DatabaseReference.CompletionListener() {
-            @Override
-            public void onComplete(DatabaseError databaseError, DatabaseReference databaseReference) {
-                Log.v("ggg", "error on completion" + databaseError);
-            }
-        }*/
-    }
+    // add the listener with firebase database
     private void addListener(){
+        DatabaseReference mDatabase = FirebaseDatabase.getInstance().getReference();
         mDatabase.addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(DataSnapshot dataSnapshot) {
@@ -165,10 +140,52 @@ public class ShowMessagesActivity extends AppCompatActivity implements LoaderMan
             }
         });
     }
-    @Override
-    public void onClick(View v) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            requestPermissions(new String[]{Manifest.permission.READ_SMS,Manifest.permission.RECEIVE_SMS},READ_MESSAGES_ID);
-        }
-    }
 }
+
+
+/* @Override
+    public Loader<Cursor> onCreateLoader(int id, Bundle args) {
+        return new CursorLoader(this,MESSAGE_URI,projections,selection,null,order);
+    }
+
+    @Override
+    public void onLoadFinished(Loader<Cursor> loader, Cursor data) {
+        Log.v("ggg","start");
+        if(data!=null && data.moveToFirst()){
+
+            messageList.clear();
+            MessageListModel.SmsMessage message;
+           do{
+
+               for(int i=0;i<data.getColumnCount();i++){
+                   Log.v("ggg"+i,data.getString(i)+" "+data.getColumnName(i));
+               }
+                message = MessageListModel.SmsMessage.getInstance()
+                        .setId(data.getLong(0))
+                        .setDate(data.getLong(1))
+                        .setSubject(data.getString(2))
+                        .setBody(data.getString(3))
+                        .setSeen(data.getString(4));
+                        messageList.add(message);
+                        Log.v("ggg",message.toString());
+                        }while(data.moveToNext());
+
+                        messageListModel.setMessageList(messageList);
+                        //adapter.notifyDataSetChanged();
+                        //sendDataToFirebase();
+                        }
+                        }
+
+                @Override
+                public void onLoaderReset(Loader<Cursor> loader) {
+
+                        }*/
+  /*private void sendDataToFirebase() {
+
+        mDatabase.child(DATABASE_NAME).setValue(messageListModel);*//*, new DatabaseReference.CompletionListener() {
+            @Override
+            public void onComplete(DatabaseError databaseError, DatabaseReference databaseReference) {
+                Log.v("ggg", "error on completion" + databaseError);
+            }
+        }*//*
+    }*/

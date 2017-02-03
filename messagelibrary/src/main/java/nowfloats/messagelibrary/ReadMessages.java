@@ -1,18 +1,20 @@
 package nowfloats.messagelibrary;
 
-import android.app.IntentService;
+import android.app.Service;
 import android.content.ContentResolver;
 import android.content.Intent;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.IBinder;
+import android.os.PowerManager;
 import android.support.annotation.Nullable;
-import android.support.v7.widget.RecyclerView;
 import android.util.Log;
-import android.widget.LinearLayout;
 
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ValueEventListener;
 
 import java.util.ArrayList;
 
@@ -20,25 +22,41 @@ import java.util.ArrayList;
  * Created by Admin on 01-02-2017.
  */
 
-public class ReadMessages extends IntentService {
-    private static final int MEAASGE_LOADER_ID = 221;
-    private static final Uri MESSAGE_URI = Uri.parse("content://sms/");
-    private static final int READ_MESSAGES_ID = 221 ;
-    private String[] projections=new String[]{"_id","date","address","body","seen"};//\"VM-INDMRT\", \"TM-JustDl\", \"VM-Quikrr\"
+public class ReadMessages extends Service {
 
-    private String selection=" address Like \"%INDMRT%\" or address Like \"%JustDl%\" or address Like \"%VM-Quikrr%\"";
-    RecyclerView recyclerView;
-    LinearLayout linearLayout;
+    private static final Uri MESSAGE_URI = Uri.parse("content://sms/");
+    private String[] projections=new String[]{"_id","date","address","body","seen"};
+    private String selection=" address Like \"%WAYSMS%\" or address Like \"%INDMRT%\" or address Like \"%JustDl%\" or address Like \"%VM-Quikrr%\"";
     private String order="date DESC";
     private static final String DATABASE_NAME="FpTag";
+
     MessageListModel messageListModel;
-    MessageAdapter adapter;
     private ArrayList<MessageListModel.SmsMessage> messageList;
+    private PowerManager.WakeLock wakeLock;
 
 
+    @Override
+    public int onStartCommand(Intent intent, int flags, int startId) {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                PowerManager powerManager = (PowerManager) getSystemService(POWER_SERVICE);
+                wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK,
+                        "MyWakelockTag");
+                wakeLock.acquire();
 
-    public ReadMessages() {
-        super("");
+                DatabaseReference mDatabase = FirebaseDatabase.getInstance().getReference();
+                addListener(mDatabase);
+                readMessage();
+                sendDataToFirebase(mDatabase);
+            }
+        }).start();
+        return Service.START_STICKY;
+    }
+
+    @Override
+    public void onCreate() {
+        super.onCreate();
         messageListModel = MessageListModel.getInstance();
         messageList= new ArrayList<>();
     }
@@ -49,21 +67,40 @@ public class ReadMessages extends IntentService {
         return null;
     }
 
-    @Override
-    protected void onHandleIntent(Intent intent) {
-        DatabaseReference mDatabase = FirebaseDatabase.getInstance().getReference();
-        readMessage();
-        sendDataToFirebase(mDatabase);
-    }
+private void addListener(DatabaseReference mDatabase){
+    mDatabase.addValueEventListener(new ValueEventListener() {
+
+        @Override
+        public void onDataChange(DataSnapshot dataSnapshot) {
+            Log.v("ggg","changed");
+            MessageListModel model = dataSnapshot.child(DATABASE_NAME).getValue(MessageListModel.class);
+
+            if (model==null){
+                Log.v("ggg","messages are empty");
+                return;
+            }
+            Log.v("ggg","stopping");
+            wakeLock.release();
+            stopSelf();
+        }
+
+        @Override
+        public void onCancelled(DatabaseError databaseError) {
+            Log.v("ggg","error in access messages");
+        }
+    });
+}
     private void sendDataToFirebase(DatabaseReference mDatabase ) {
         Log.v("ggg","running2");
         messageListModel.setDatabase(messageList.size());
-        mDatabase.child(DATABASE_NAME).setValue(messageListModel);/*, new DatabaseReference.CompletionListener() {
+        mDatabase.child(DATABASE_NAME).setValue(messageListModel);
+        /*, new DatabaseReference.CompletionListener() {
             @Override
             public void onComplete(DatabaseError databaseError, DatabaseReference databaseReference) {
                 Log.v("ggg", "error on completion" + databaseError);
             }
         }*/
+
         Log.v("ggg","running3");
     }
 
@@ -92,5 +129,11 @@ public class ReadMessages extends IntentService {
                 messageListModel.setMessageList(messageList);
         }
         Log.v("ggg","running1");
+    }
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        Log.v("ggg","destroy");
     }
 }
