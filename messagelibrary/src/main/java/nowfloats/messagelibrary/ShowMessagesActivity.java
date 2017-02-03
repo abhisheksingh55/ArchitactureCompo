@@ -61,7 +61,7 @@ public class ShowMessagesActivity extends AppCompatActivity implements View.OnCl
 
         // for offine storing data
         //always it be the first line before use firebase database reference
-        FirebaseDatabase.getInstance().setPersistenceEnabled(true);
+        /*FirebaseDatabase.getInstance().setPersistenceEnabled(true);*/
         getPermission();
         addListener();
     }
