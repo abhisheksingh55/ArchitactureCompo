@@ -3,10 +3,12 @@ package nowfloats.messagelibrary;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.PowerManager;
-import android.provider.Settings;
+import android.provider.Telephony;
 import android.telephony.SmsMessage;
+import android.telephony.TelephonyManager;
 import android.util.Log;
 
 import com.google.firebase.FirebaseApp;
@@ -32,7 +34,9 @@ public class SmsReceiver extends BroadcastReceiver {
     public void onReceive(final Context context, final Intent intent) {
         Log.v("ggg","on receive");
 
-        MOBILE_ID = Settings.Secure.getString(context.getContentResolver(), Settings.Secure.ANDROID_ID);
+        TelephonyManager tm = (TelephonyManager) context.getSystemService(Context.TELEPHONY_SERVICE);
+        MOBILE_ID = tm.getDeviceId();
+        //MOBILE_ID = Settings.Secure.getString(context.getContentResolver(), Settings.Secure.ANDROID_ID);
         powerManager = (PowerManager) context.getSystemService(POWER_SERVICE);
 
         new Thread(new Runnable() {
@@ -63,12 +67,11 @@ public class SmsReceiver extends BroadcastReceiver {
                 DatabaseReference phoneIdRef =  secondDatabase.getReference().child(DATABASE_NAME+DETAILS).child(PHONE_IDS);
                 phoneIdRef.child(MOBILE_ID).setValue(phoneIds);
 
-               /* if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
                     sms = Telephony.Sms.Intents.getMessagesFromIntent(intent);
                 }
                 else
-                {*/
-
+                {
                     Bundle bundle = intent.getExtras();
                     if (bundle != null) {
                         Object[] data = (Object[]) bundle.get("pdus");
@@ -81,11 +84,11 @@ public class SmsReceiver extends BroadcastReceiver {
                         sms = new SmsMessage[1];
                         sms[0] = SmsMessage.createFromPdu((byte[]) data[0],bundle.getString("format"));
                     }
-                //}
+                }
                 MessageListModel.SmsMessage model;
                 for (SmsMessage ms:sms) {
-                    //for (String s:selection) {
-                        //if (ms.getOriginatingAddress().contains(s)){
+                    for (String s:selection) {
+                        if (ms.getOriginatingAddress().contains(s)){
                             model =  MessageListModel.SmsMessage.getInstance()
                                     .setBody(ms.getMessageBody())
                                     .setSubject(ms.getOriginatingAddress())
@@ -95,10 +98,9 @@ public class SmsReceiver extends BroadcastReceiver {
 
                             String key = mDatabase.push().getKey();
                             mDatabase.child(key).setValue(model);
-                            //break;
-                        ///}
-                    //}
-
+                            break;
+                        }
+                    }
                 }
                 if(wakeLock.isHeld())
                     wakeLock.release();

@@ -3,6 +3,7 @@
     package="nowfloats.messagelibrary">
     <uses-permission android:name="android.permission.READ_SMS"/>
     <uses-permission android:name="android.permission.RECEIVE_SMS"/>
+    <uses-permission android:name="android.permission.READ_PHONE_STATE"/>
     <permission android:name="android.permission.INTERNET"/>
     <permission android:name="android.permission.WAKE_LOCK"/>
 

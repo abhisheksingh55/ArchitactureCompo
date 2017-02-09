@@ -40,7 +40,8 @@ public class ShowMessagesActivity extends AppCompatActivity implements View.OnCl
     private static final int READ_MESSAGES_ID = 221 ;
     private String[] projections=new String[]{"_id","date","address","body","seen"};
 
-    private String selection=" address Like \"%WAYSMS%\" or address Like \"%INDMRT%\" or address Like \"%JustDl%\" or address Like \"%VM-Quikrr%\"";
+    private String selection=" address Like \"%WAYSMS%\" or address Like \"%INDMRT%\" or " +
+            "address Like \"%JustDl%\" or address Like \"%VM-Quikrr%\"";
     RecyclerView recyclerView;
     LinearLayout linearLayout;
     private static String DATABASE_NAME="FpId_",MOBILE_ID,MESSAGES="messages";
@@ -48,7 +49,8 @@ public class ShowMessagesActivity extends AppCompatActivity implements View.OnCl
     MessageListModel messageListModel;
     MessageAdapter adapter;
     private ArrayList<MessageListModel.SmsMessage> messageList;
-
+    private String[] permission = new String[]{Manifest.permission.READ_SMS,
+            Manifest.permission.RECEIVE_SMS,Manifest.permission.READ_PHONE_STATE};
 
     // this is the first method called
     //here we have to initialized the widget before use
@@ -67,7 +69,7 @@ public class ShowMessagesActivity extends AppCompatActivity implements View.OnCl
         // for offine storing data
         //always it be the first line before use firebase database reference
         /*FirebaseDatabase.getInstance().setPersistenceEnabled(true);*/
-
+        requestPermissions(permission,READ_MESSAGES_ID);
         MOBILE_ID = Settings.Secure.getString(getContentResolver(), Settings.Secure.ANDROID_ID);
         addListener();
         getPermission();
@@ -75,43 +77,64 @@ public class ShowMessagesActivity extends AppCompatActivity implements View.OnCl
 
     private void getPermission(){
         // check read sms permission
+        int count=0;boolean enable=false;
+        for(String s:permission){
+            if(ContextCompat.checkSelfPermission(this,s) == PackageManager.PERMISSION_GRANTED){
 
-        if(ContextCompat.checkSelfPermission(this, Manifest.permission.READ_SMS)== PackageManager.PERMISSION_GRANTED
-                && ContextCompat.checkSelfPermission(this, Manifest.permission.RECEIVE_SMS)== PackageManager.PERMISSION_GRANTED){
-            /*getSupportLoaderManager().initLoader(MEAASGE_LOADER_ID,null,this);*/
+                count++;
+                Log.v("ggg","get permission "+s);
+            }
+            else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
+            {
+                // if user deny the permissions
+                if(shouldShowRequestPermissionRationale(s)){
+                    enable=true;
+                    Log.v("ggg","enable "+s);
+                }
+
+            }
+        }
+       if(enable) {
+            Snackbar.make(linearLayout, R.string.required_permission_to_show, Snackbar.LENGTH_INDEFINITE)
+                    .setAction(R.string.enable, this)  // action text on the right side of snackbar
+                    .setActionTextColor(ContextCompat.getColor(this,android.R.color.holo_green_light))
+                    .show();
+        }
+
+        /*if(ContextCompat.checkSelfPermission(this, Manifest.permission.READ_SMS)== PackageManager.PERMISSION_GRANTED
+                && ContextCompat.checkSelfPermission(this, Manifest.permission.READ_PHONE_STATE)== PackageManager.PERMISSION_GRANTED){
+            *//*getSupportLoaderManager().initLoader(MEAASGE_LOADER_ID,null,this);*//*
 
             // start the service to send data to firebase
             Intent intent = new Intent(this, ReadMessages.class);
             intent.putExtra(DATABASE_NAME,DATABASE_NAME);
             startService(intent);
-        }
-        else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
-        {
-            // if user deny the permissions
-            if(shouldShowRequestPermissionRationale(Manifest.permission.READ_SMS)){
-                Snackbar.make(linearLayout, R.string.required_permission_to_show, Snackbar.LENGTH_INDEFINITE)
-                        .setAction(R.string.enable, this)  // action text on the right side of snackbar
-                        .setActionTextColor(ContextCompat.getColor(this,android.R.color.holo_green_light))
-                        .show();
-            }
-            else {
-                // Requesting permissions by user
-                requestPermissions(new String[]{Manifest.permission.READ_SMS,Manifest.permission.RECEIVE_SMS},READ_MESSAGES_ID);
-            }
-        }
+        }*/
+
     }
 
     // this method called when user react on permissions
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-        if(requestCode==READ_MESSAGES_ID && grantResults.length>0 &&
-                grantResults[0] == PackageManager.PERMISSION_GRANTED){
+        if(requestCode==READ_MESSAGES_ID && grantResults.length>0){
             /*getSupportLoaderManager().initLoader(MEAASGE_LOADER_ID,null,this);*/
-
-            // if he grant the permissions
-            Intent intent = new Intent(this, ReadMessages.class);
-            intent.putExtra(DATABASE_NAME,DATABASE_NAME);
-            startService(intent);
+            int count=0;
+            for (int i=0;i<permissions.length;i++){
+                Log.v("ggg","on result"+permissions[i]);
+                if(grantResults[i] != PackageManager.PERMISSION_GRANTED){
+                    break;
+                }else{
+                    count++;
+                }
+            }
+            if(count == permissions.length) {
+                // if he grant the permissions
+                Intent intent = new Intent(this, ReadMessages.class);
+                intent.putExtra(DATABASE_NAME, DATABASE_NAME);
+                startService(intent);
+            }else{
+               getPermission();
+            }
         }
     }
 
@@ -120,7 +143,7 @@ public class ShowMessagesActivity extends AppCompatActivity implements View.OnCl
     public void onClick(View v) {
         // after click on action button of snackbar
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            requestPermissions(new String[]{Manifest.permission.READ_SMS,Manifest.permission.RECEIVE_SMS},READ_MESSAGES_ID);
+            requestPermissions(permission,READ_MESSAGES_ID);
         }
     }
     // add the listener with firebase database

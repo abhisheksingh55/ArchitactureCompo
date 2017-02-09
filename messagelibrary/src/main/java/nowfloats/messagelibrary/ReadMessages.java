@@ -2,12 +2,13 @@ package nowfloats.messagelibrary;
 
 import android.app.Service;
 import android.content.ContentResolver;
+import android.content.Context;
 import android.content.Intent;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.IBinder;
-import android.provider.Settings;
 import android.support.annotation.Nullable;
+import android.telephony.TelephonyManager;
 import android.util.Log;
 
 import com.google.firebase.FirebaseApp;
@@ -37,8 +38,9 @@ public class ReadMessages extends Service {
             DATABASE_NAME=intent.getStringExtra(DATABASE_NAME);
         }
 
-        MOBILE_ID = Settings.Secure.getString(getContentResolver(), Settings.Secure.ANDROID_ID);
-
+        //MOBILE_ID = Settings.Secure.getString(getContentResolver(), Settings.Secure.ANDROID_ID);
+        TelephonyManager tm = (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
+        MOBILE_ID = tm.getDeviceId();
         new Thread(new Runnable() {
             @Override
             public void run() {
