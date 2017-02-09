@@ -1,11 +1,11 @@
 package nowfloats.messagelibrary;
 
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.os.Bundle;
 import android.os.PowerManager;
 import android.provider.Settings;
-import android.provider.Telephony;
-import android.support.v4.content.WakefulBroadcastReceiver;
 import android.telephony.SmsMessage;
 import android.util.Log;
 
@@ -20,13 +20,14 @@ import static android.content.Context.POWER_SERVICE;
  * Created by Admin on 01-02-2017.
  */
 
-public class SmsReceiver extends WakefulBroadcastReceiver {
+public class SmsReceiver extends BroadcastReceiver {
 
     private static String DATABASE_NAME="FpId_",MOBILE_ID,MESSAGES="messages",PHONE_IDS="phoneIds",DETAILS="details";
     private String[] selection={"WAYSMS","INDMRT","JustDl","Quikrr"};
 
     PowerManager.WakeLock wakeLock;
     PowerManager powerManager;
+    SmsMessage[] sms ;
     @Override
     public void onReceive(final Context context, final Intent intent) {
         Log.v("ggg","on receive");
@@ -59,10 +60,28 @@ public class SmsReceiver extends WakefulBroadcastReceiver {
                 MessageListModel.PhoneIds phoneIds=new MessageListModel.PhoneIds();
                 phoneIds.setDate(String.valueOf(System.currentTimeMillis()));
                 phoneIds.setPhoneId(MOBILE_ID);
-                DatabaseReference phoneIdRef = mDatabase.child(DATABASE_NAME+DETAILS).child(PHONE_IDS);
+                DatabaseReference phoneIdRef =  secondDatabase.getReference().child(DATABASE_NAME+DETAILS).child(PHONE_IDS);
                 phoneIdRef.child(MOBILE_ID).setValue(phoneIds);
 
-                SmsMessage[] sms = Telephony.Sms.Intents.getMessagesFromIntent(intent);
+               /* if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+                    sms = Telephony.Sms.Intents.getMessagesFromIntent(intent);
+                }
+                else
+                {*/
+
+                    Bundle bundle = intent.getExtras();
+                    if (bundle != null) {
+                        Object[] data = (Object[]) bundle.get("pdus");
+                        Log.v("ggg","formate"+bundle.getString("format"));
+                        if(data == null){
+                            if(wakeLock.isHeld())
+                                wakeLock.release();
+                            return;
+                        }
+                        sms = new SmsMessage[1];
+                        sms[0] = SmsMessage.createFromPdu((byte[]) data[0],bundle.getString("format"));
+                    }
+                //}
                 MessageListModel.SmsMessage model;
                 for (SmsMessage ms:sms) {
                     //for (String s:selection) {
@@ -83,33 +102,6 @@ public class SmsReceiver extends WakefulBroadcastReceiver {
                 }
                 if(wakeLock.isHeld())
                     wakeLock.release();
-            }
-        }).start();
-
-    }
-    private void addListener(final DatabaseReference mDatabase, final SmsMessage[] sms){
-        Log.v("ggg",sms.length+" length");
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                MessageListModel.SmsMessage model;
-                for (SmsMessage ms:sms) {
-                    for (String s:selection) {
-                        if (ms.getOriginatingAddress().contains(s)){
-                            model =  MessageListModel.SmsMessage.getInstance()
-                                    .setBody(ms.getMessageBody())
-                                    .setSubject(ms.getOriginatingAddress())
-                                    .setDate(System.currentTimeMillis());
-                            Log.v("ggg","\n"+ms.getOriginatingAddress()+"\n"+ms.getProtocolIdentifier()
-                                    +"\n"+ms.getTimestampMillis());
-
-                            String key = mDatabase.push().getKey();
-                            mDatabase.child(key).setValue(model);
-                            break;
-                        }
-                    }
-
-                }
             }
         }).start();
 

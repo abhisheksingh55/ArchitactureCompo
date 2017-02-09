@@ -62,7 +62,8 @@ public class ShowMessagesActivity extends AppCompatActivity implements View.OnCl
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
         messageListModel = MessageListModel.getInstance();
         messageList= new ArrayList<>();
-
+        adapter = new MessageAdapter(messageList);
+        recyclerView.setAdapter(adapter);
         // for offine storing data
         //always it be the first line before use firebase database reference
         /*FirebaseDatabase.getInstance().setPersistenceEnabled(true);*/
@@ -138,21 +139,21 @@ public class ShowMessagesActivity extends AppCompatActivity implements View.OnCl
         FirebaseDatabase secondDatabase = FirebaseDatabase.getInstance(secondApp);
         DatabaseReference mDatabase = secondDatabase.getReference();
         mDatabase.child(DATABASE_NAME+MESSAGES).child(MOBILE_ID).addValueEventListener(new ValueEventListener() {
-            @Override
-            public void onDataChange(DataSnapshot dataSnapshot) {
 
+        @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                messageList.clear();
                 ArrayList<MessageListModel.SmsMessage> modelList = new ArrayList<MessageListModel.SmsMessage>();
                 for(DataSnapshot dataSnapshot1:dataSnapshot.getChildren()){
                     Log.v("ggg","hey");
-                    modelList.add(dataSnapshot1.getValue(MessageListModel.SmsMessage.class));
+                    messageList.add(dataSnapshot1.getValue(MessageListModel.SmsMessage.class));
                 }
 
-                Log.v("ggg","size "+modelList.size());
-                if (modelList.size()==0){
+                Log.v("ggg","size "+messageList.size());
+                if (messageList.size()==0){
                     Snackbar.make(linearLayout,R.string.contact_empty,Snackbar.LENGTH_LONG).show();
                 }
-                adapter = new MessageAdapter(modelList);
-                recyclerView.setAdapter(adapter);
+                adapter.notifyDataSetChanged();
             }
 
             @Override
