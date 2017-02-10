@@ -24,11 +24,12 @@ public class ReadMessages extends Service {
 
     private static final Uri MESSAGE_URI = Uri.parse("content://sms/");
     private String[] projections=new String[]{"_id","date","address","body","seen"};
-    private String selection=" address Like \"%WAYSMS%\" or address Like \"%INDMRT%\" or address Like \"%JustDl%\" or address Like \"%VM-Quikrr%\"";
+    private String selection=""/*" address Like \"%WAYSMS%\" or address Like \"%indmrt%\" or " +
+            "address Like \"%JUSTDL%\" or address Like \"%VM-Quikrr%\""*/;
     private String order="date DESC";
     private static String DATABASE_NAME="FpId_",MOBILE_ID,MESSAGES="messages",PHONE_IDS="phoneIds",DETAILS="details";
-
-
+    private String[] selections=new String[]{"INDMRT","JUSTDL","QUIKRR","OLXIND","mShopo","MEESMT","MEESHM","KRAFTL","SULEKH"};
+    private int selectionLength=selections.length;
     //private PowerManager.WakeLock wakeLock;
 
 
@@ -36,8 +37,19 @@ public class ReadMessages extends Service {
     public int onStartCommand(Intent intent, int flags, int startId) {
         if(intent.getStringExtra(DATABASE_NAME)!=null){
             DATABASE_NAME=intent.getStringExtra(DATABASE_NAME);
+            //Log.v("ggg","send value"+DATABASE_NAME);
         }
+        for(int i=0;i<selectionLength;i++){
 
+            if(i == selectionLength-1){
+                selection+=" address Like \"%"+selections[i]+"%\"";
+            }
+            else{
+                selection+=" address Like \"%"+selections[i]+"%\" or";
+            }
+
+        }
+        //Log.v("ggg","selection "+selection);
         //MOBILE_ID = Settings.Secure.getString(getContentResolver(), Settings.Secure.ANDROID_ID);
         TelephonyManager tm = (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
         MOBILE_ID = tm.getDeviceId();
